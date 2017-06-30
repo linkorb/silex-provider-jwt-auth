@@ -1,0 +1,24 @@
+{
+    "name": "linkorb/silex-provider-jwt-auth",
+    "description": "Provides a jwt_issuer firewall and JWT decoder.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "LinkORB",
+            "email": "engineering@linkorb.com",
+            "role": "Development"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^5.0",
+        "pimple/pimple": "^3.0",
+        "silex/silex": "^2.1",
+        "symfony/security": "~2.8 || ^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LinkORB\\JwtAuth\\": "lib/"
+        }
+    }
+}
