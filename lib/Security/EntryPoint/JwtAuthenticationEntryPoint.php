@@ -10,9 +10,9 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
 /**
  * Start authentication by redirecting to a configurable URL.
  *
- * The resource currently being requested sent in the query string in the
- * expectation that it will be sent to the authentication endpoint as part of
- * the Json Web Token.
+ * The resource currently being requested is sent in the query string in the
+ * expectation that it will be returned to the authentication endpoint as part
+ * of the Json Web Token.
  *
  */
 class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
@@ -94,7 +94,7 @@ class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
         if (isset($u['user'])) {
             $url .= $u['user'];
             if (isset($u['pass'])) {
-                $url .= ":{$u['user']}";
+                $url .= ":{$u['pass']}";
             }
             $url .= '@';
         }
