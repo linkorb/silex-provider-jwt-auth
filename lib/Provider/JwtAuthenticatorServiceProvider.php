@@ -61,8 +61,6 @@ class JwtAuthenticatorServiceProvider implements
     ControllerProviderInterface,
     BootableProviderInterface
 {
-    const AUTH_PROVIDER_KEY = 'jwt_auth';
-
     private $fakeRoutes = [];
 
     public function register(Container $app)
@@ -113,14 +111,14 @@ class JwtAuthenticatorServiceProvider implements
                 return new SimpleAuthenticationProvider(
                     $app["jwt_auth.security.authenticator.{$name}.jwt_issuer"],
                     $app['security.user_provider.'.$name],
-                    self::AUTH_PROVIDER_KEY
+                    $name
                 );
             };
             $app["security.authentication_listener.{$name}.jwt_issuer"] = function () use ($app, $name) {
                 return new SimplePreAuthenticationListener(
                     $app['security.token_storage'],
                     $app['security.authentication_manager'],
-                    self::AUTH_PROVIDER_KEY,
+                    $name,
                     $app["jwt_auth.security.authenticator.{$name}.jwt_issuer"],
                     isset($app['logger']) ? $app['logger'] : null,
                     $app['dispatcher']
