@@ -21,11 +21,9 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  * sends users to an issuer of JWTs to claim a username for authentication.
  *
  * The intention is to direct the user to a particular URL where they will be
- * prompted to sign-in before being issued a token and directed back to the
- * app.  The issuer URL will contain the path originally requested by the user
- * and the token is assumed to contain that path.  Thus, if the token is valid
- * and the user's details are successfully retrieved, the user is authenicated
- * and directed back to the originally requested resource.
+ * prompted to sign-in before being issued a token and directed back to the app
+ * check_path where authentication will continue.  If the token is valid the
+ * user is returned to their original location in the app.
  *
  * Mandatory configuration (jwt_auth.decoder.config):-
  *
@@ -36,6 +34,7 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  *
  * Firewall options:-
  *
+ * app_identifier: Required! An identifier for the application.
  * jwt_issuer_url: Required! Url from where a Json Web Token may be obtained.
  *
  * jwt_issuer_url_origin_param: The name of an HTTP query string parameter with
@@ -82,11 +81,15 @@ class JwtAuthenticatorServiceProvider implements
         // https://silex.sensiolabs.org/doc/2.0/providers/security.html#defining-a-custom-authentication-provider
         //
         $app['security.authentication_listener.factory.jwt_issuer'] = $app->protect(function ($name, $options) use ($app, $that) {
+            if (!isset($options['app_identifier'])) {
+                throw new RuntimeException("Missing option \"app_identifier\" for firewall {$name}.");
+            }
             if (!isset($options['jwt_issuer_url'])) {
                 throw new RuntimeException("Missing option \"jwt_issuer_url\" for firewall {$name}.");
             }
             $app["jwt_auth.security.entry_point.{$name}.jwt_issuer"] = function () use ($app, $options) {
                 return new JwtAuthenticationEntryPoint(
+                    $options['app_identifier'],
                     $options['jwt_issuer_url'],
                     $options
                 );

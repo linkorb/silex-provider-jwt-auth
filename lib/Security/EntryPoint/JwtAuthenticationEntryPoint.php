@@ -10,21 +10,21 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
 /**
  * Start authentication by redirecting to a configurable URL.
  *
- * The resource currently being requested is sent in the query string in the
- * expectation that it will be returned to the authentication endpoint as part
- * of the Json Web Token.
- *
  */
 class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
 {
     /**
-     * Name of a request url query parameter with which to provide the path on
-     * this host from which the request originates.
+     * Name of a request url query parameter with which to identify the
+     * application.
      *
      * @var string
      */
     const ORIGIN_PARAM = 'origin';
 
+    /**
+     * @var string
+     */
+    private $appIdentifier;
     /**
      * @var string
      */
@@ -35,11 +35,13 @@ class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
     private $options;
 
     /**
+     * @param string $appIdentifier Identifies the application to the issuer.
      * @param string $issuerUrl Url from where a Json Web Token may be obtained.
      * @param array $options Options.
      */
-    public function __construct($issuerUrl, array $options = [])
+    public function __construct($appIdentifier, $issuerUrl, array $options = [])
     {
+        $this->appIdentifier = $appIdentifier;
         $this->issuerUrl = $issuerUrl;
         $this->options = $options;
     }
@@ -53,9 +55,7 @@ class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
         Request $request,
         AuthenticationException $authException = null
     ) {
-        return new RedirectResponse(
-            $this->buildUrl(rawurlencode($request->getRequestUri()))
-        );
+        return new RedirectResponse($this->buildUrl());
     }
 
     private function optOriginParam()
@@ -70,18 +70,18 @@ class JwtAuthenticationEntryPoint implements AuthenticationEntryPointInterface
      * Deconstruct the issuerUrl, add the origin query param and reconstruct.
      * Won't handle an issuerUrl in which the host is an IPv6 addr.
      */
-    private function buildUrl($origin)
+    private function buildUrl()
     {
         $u = parse_url($this->issuerUrl);
 
         if (isset($u['query'])) {
             $q = [];
             parse_str($u['query'], $q);
-            $q[$this->optOriginParam()] = $origin;
+            $q[$this->optOriginParam()] = $this->appIdentifier;
             $u['query'] = http_build_query($q);
         } else {
             $u['query'] = http_build_query(
-                [$this->optOriginParam() => $origin]
+                [$this->optOriginParam() => $this->appIdentifier]
             );
         }
 
