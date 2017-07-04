@@ -44,16 +44,12 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  * default_return_to: path to which to redirect after successful authentication
  *                    (used only when the JWT does not contain this information,
  *                    default: "/")
- * return_to_jwt_key: the name of a key in the JWT which holds the path to which
- *                    to redirect after successful authentication (default:
- *                    "origin")
  * username_jwt_key: the name of a key in the JWT which holds the username
  *                   being claimed (default: "username")
  * jwt_request_key: the name of an HTTP query string parameter which holds the
  *                  JWT (default: jwt)
  * check_path: the path at which the JWT is decoded and used for authentication
  *             (default: "/auth")
- *
  *
  */
 class JwtAuthenticatorServiceProvider implements

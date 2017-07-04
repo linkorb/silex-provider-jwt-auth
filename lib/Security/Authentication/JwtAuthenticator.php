@@ -26,7 +26,7 @@ use LinkORB\JwtAuth\JwtCodec\JwtDecoder;
  *
  * Only perform authentication when a specific path is requested, e.g. "/auth".
  *
- * Redirect to a path on this host, as specified in the JWT, once authentication
+ * Redirect to the originally requested path (target_path) once authentication
  * succeeds.
  *
  */
@@ -41,13 +41,6 @@ class JwtAuthenticator implements
      * @var string
      */
     const DEFAULT_REDIRECT = '/';
-    /**
-     * The name of the JWT key which holds the URL path to which to redirect
-     * post-authentication.
-     *
-     * @var string
-     */
-    const TOKEN_KEY_REDIRECT = 'origin';
     /**
      * The name of the JWT key which holds the username being claimed.
      *
@@ -69,7 +62,6 @@ class JwtAuthenticator implements
     const AUTH_PATH = '/auth';
 
     private $decoder;
-    private $claim;
     private $options = [];
 
     public function __construct(JwtDecoder $decoder, array $options = [])
@@ -122,7 +114,7 @@ class JwtAuthenticator implements
         $jwt = $token->getCredentials();
 
         try {
-            $this->claim = $this->decoder->decode($jwt);
+            $claim = $this->decoder->decode($jwt);
         } catch (EncoderException $e) {
             throw new CustomUserMessageAuthenticationException(
                 'The supplied Json Web Token is invalid.'
@@ -130,13 +122,13 @@ class JwtAuthenticator implements
         }
 
         $usernameProperty = $this->optUsername();
-        if (!isset($this->claim->{$usernameProperty})) {
+        if (!isset($claim->{$usernameProperty})) {
             throw new CustomUserMessageAuthenticationException(
                 'The supplied Json Web Token is invalid.'
             );
         }
 
-        $username = $this->claim->{$usernameProperty};
+        $username = $claim->{$usernameProperty};
         if ('' === $username || null === $username) {
             $username = AuthenticationProviderInterface::USERNAME_NONE_PROVIDED;
         }
@@ -171,22 +163,20 @@ class JwtAuthenticator implements
     }
 
     /**
-     * Redirect to a path on this host, as directed by the content of the JWT.
+     * Redirect to the session target_path, as was set at start of authentication.
      *
      * {@inheritDoc}
      */
     public function onAuthenticationSuccess(Request $request, TokenInterface $token)
     {
-        if (!is_object($this->claim) || !isset($this->claim->{$this->optRedirect()})) {
+        $targetUrl = $request->getSession()->get("_security.{$token->getProviderKey()}.target_path");
+        if (!$targetUrl) {
             return new RedirectResponse(
                 $request->getSchemeAndHttpHost() . $this->optDefaultRedirect()
             );
         }
 
-        return new RedirectResponse(
-            $request->getSchemeAndHttpHost()
-            . rawurldecode($this->claim->{$this->optRedirect()})
-        );
+        return new RedirectResponse($targetUrl);
     }
 
     /**
@@ -216,14 +206,6 @@ class JwtAuthenticator implements
         return isset($this->options['default_return_to'])
             ? $this->options['default_return_to']
             : self::DEFAULT_REDIRECT
-        ;
-    }
-
-    private function optRedirect()
-    {
-        return isset($this->options['return_to_jwt_key'])
-            ? $this->options['return_to_key']
-            : self::TOKEN_KEY_REDIRECT
         ;
     }
 
