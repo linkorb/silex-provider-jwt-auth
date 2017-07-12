@@ -27,6 +27,7 @@ Security providers:-
                     'pattern' => '^/secure-area',
                     'stateless' => false,
                     'jwt_issuer' => [
+                        'app_identifier' => 'my-app-name',
                         'jwt_issuer_url' => 'https://example.com/issue/a/jwt',
                         // see JwtAuthenticatorServiceProvider for more options
                     ],
