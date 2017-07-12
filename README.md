@@ -10,6 +10,9 @@ Install using composer:-
 
     $ composer require linkorb/silex-provider-jwt-auth
 
+Note: use the v1 branch when you're restricted to using version 2.7.x of
+symfony/security.
+
 Then configure and register the provider along with the Silex Session and
 Security providers:-
 
