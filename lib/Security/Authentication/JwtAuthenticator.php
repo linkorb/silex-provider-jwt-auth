@@ -152,8 +152,6 @@ class JwtAuthenticator implements
             );
         }
 
-        $user = $userProvider->loadUserByUsername($username);
-
         return new PreAuthenticatedToken(
             $user,
             $jwt,
