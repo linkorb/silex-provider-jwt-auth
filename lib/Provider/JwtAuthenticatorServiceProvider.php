@@ -13,17 +13,32 @@ use Symfony\Component\Security\Core\Authentication\Provider\SimpleAuthentication
 use Symfony\Component\Security\Http\Firewall\SimplePreAuthenticationListener;
 
 use LinkORB\JwtAuth\JwtCodec\JwtDecoder;
+use LinkORB\JwtAuth\Security\Authentication\FastJwtAuthenticator;
 use LinkORB\JwtAuth\Security\Authentication\JwtAuthenticator;
+use LinkORB\JwtAuth\Security\EntryPoint\FastAuthenticationEntryPoint;
 use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
 
 /**
  * Provides a Json Web Token (JWT) decoder and a "jwt_issuer" firewall which
- * sends users to an issuer of JWTs to claim a username for authentication.
+ * can be configured in two ways:-
  *
- * The intention is to direct the user to a particular URL where they will be
- * prompted to sign-in before being issued a token and directed back to the app
- * check_path where authentication will continue.  If the token is valid the
- * user is returned to their original location in the app.
+ * 1) JWT Authentication sends users to an issuer of JWTs to claim a username
+ *    for authentication.  This is the default configuration.
+ *
+ *    The intention is to direct the user to a particular URL where they will be
+ *    prompted to sign-in before being issued a token and directed back to the
+ *    app check_path where authentication will continue.  If the token is valid
+ *    the user is returned to their original location in the app.
+ *
+ *
+ * 2) Fast JWT Authentication differs from JWT Authentication in the following
+ *    ways:-
+ *
+ *    a) users are expected to land on the app already armed with a JWT; that is
+ *       the app will not send the user to an issuer of JWTs to claim a username
+ *    b) authentication is performed without redirection to an authentication
+ *       endpoint or subsequent redirection to the originally requested resource *
+ *
  *
  * Mandatory configuration (jwt_auth.decoder.config):-
  *
@@ -32,10 +47,19 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  *              the JWTs
  * permitted_algos: list of permitted algorithm identifiers
  *
- * Firewall options:-
  *
- * app_identifier: Required! An identifier for the application.
- * jwt_issuer_url: Required! Url from where a Json Web Token may be obtained.
+ * Firewall options required for "Normal" JWT auth:-
+ *
+ * app_identifier: An identifier for the application.
+ * jwt_issuer_url: Url from where a Json Web Token may be obtained.
+ *
+ *
+ * Firewall options required for "Fast" JWT auth:-
+ *
+ * jwt_info_url: Url to which the requestor is directed when a JWT is missing.
+ *
+ *
+ * Firewall options:-
  *
  * jwt_issuer_url_origin_param: The name of an HTTP query string parameter with
  *                              which to supply the issuer with the origin path
@@ -81,13 +105,22 @@ class JwtAuthenticatorServiceProvider implements
         // https://silex.sensiolabs.org/doc/2.0/providers/security.html#defining-a-custom-authentication-provider
         //
         $app['security.authentication_listener.factory.jwt_issuer'] = $app->protect(function ($name, $options) use ($app, $that) {
-            if (!isset($options['app_identifier'])) {
+            $requireIssuer = !isset($options['fast_authentication']) || false === $options['fast_authentication'];
+            if ($requireIssuer && !isset($options['app_identifier'])) {
                 throw new RuntimeException("Missing option \"app_identifier\" for firewall {$name}.");
             }
-            if (!isset($options['jwt_issuer_url'])) {
+            if ($requireIssuer && !isset($options['jwt_issuer_url'])) {
                 throw new RuntimeException("Missing option \"jwt_issuer_url\" for firewall {$name}.");
             }
-            $app["jwt_auth.security.entry_point.{$name}.jwt_issuer"] = function () use ($app, $options) {
+            if (!$requireIssuer && !isset($options['jwt_info_url'])) {
+                throw new RuntimeException("Missing option \"jwt_info_url\" for firewall {$name}.");
+            }
+            $app["jwt_auth.security.entry_point.{$name}.jwt_issuer"] = function () use ($app, $options, $requireIssuer) {
+                if (!$requireIssuer) {
+                    return new FastAuthenticationEntryPoint(
+                        $options['jwt_info_url']
+                    );
+                }
                 return new JwtAuthenticationEntryPoint(
                     $options['app_identifier'],
                     $options['jwt_issuer_url'],
@@ -101,7 +134,13 @@ class JwtAuthenticatorServiceProvider implements
                 "check_path_{$name}"
             );
             $app["jwt_auth.security.authenticator.{$name}.jwt_issuer"] = function () use ($app, $options) {
-                return new JwtAuthenticator(
+                if (!isset($options['fast_authentication']) || false === $options['fast_authentication']) {
+                    return new JwtAuthenticator(
+                        $app['jwt_auth.decoder'],
+                        $options
+                    );
+                }
+                return new FastJwtAuthenticator(
                     $app['jwt_auth.decoder'],
                     $options
                 );
