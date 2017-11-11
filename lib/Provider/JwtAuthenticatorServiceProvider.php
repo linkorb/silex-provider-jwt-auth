@@ -17,6 +17,7 @@ use LinkORB\JwtAuth\Security\Authentication\FastJwtAuthenticator;
 use LinkORB\JwtAuth\Security\Authentication\JwtAuthenticator;
 use LinkORB\JwtAuth\Security\EntryPoint\FastAuthenticationEntryPoint;
 use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
+use LinkORB\JwtAuth\Security\Firewall\RenewablePreAuthenticationListener;
 
 /**
  * Provides a Json Web Token (JWT) decoder and a "jwt_issuer" firewall which
@@ -68,6 +69,9 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  * default_return_to: path to which to redirect after successful authentication
  *                    (used only when the JWT does not contain this information,
  *                    default: "/") Not meaningful for Fast JWT Authentication
+ * renewable_auth: A boolean which, when true, causes an existing authentic
+ *                 security token to be destroyed and authentication to proceed
+ *                 anew when requesting the authentication check_path
  * username_jwt_key: the name of a key in the JWT which holds the username
  *                   being claimed (default: "username")
  * jwt_request_key: the name of an HTTP query string parameter which holds the
@@ -107,6 +111,7 @@ class JwtAuthenticatorServiceProvider implements
         //
         $app['security.authentication_listener.factory.jwt_issuer'] = $app->protect(function ($name, $options) use ($app, $that) {
             $requireIssuer = !isset($options['fast_authentication']) || false === $options['fast_authentication'];
+            $renewableAuth = isset($options['renewable_auth']) && true === $options['renewable_auth'];
             if ($requireIssuer && !isset($options['app_identifier'])) {
                 throw new RuntimeException("Missing option \"app_identifier\" for firewall {$name}.");
             }
@@ -153,8 +158,12 @@ class JwtAuthenticatorServiceProvider implements
                     $name
                 );
             };
-            $app["security.authentication_listener.{$name}.jwt_issuer"] = function () use ($app, $name) {
-                return new SimplePreAuthenticationListener(
+            $app["security.authentication_listener.{$name}.jwt_issuer"] = function () use ($app, $name, $renewableAuth) {
+                $class = $renewableAuth
+                    ? RenewablePreAuthenticationListener::class
+                    : SimplePreAuthenticationListener::class
+                ;
+                return new $class(
                     $app['security.token_storage'],
                     $app['security.authentication_manager'],
                     $name,
