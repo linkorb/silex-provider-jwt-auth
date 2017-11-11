@@ -37,7 +37,7 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  *    a) users are expected to land on the app already armed with a JWT; that is
  *       the app will not send the user to an issuer of JWTs to claim a username
  *    b) authentication is performed without redirection to an authentication
- *       endpoint or subsequent redirection to the originally requested resource *
+ *       endpoint or subsequent redirection to the originally requested resource
  *
  *
  * Mandatory configuration (jwt_auth.decoder.config):-
@@ -64,9 +64,10 @@ use LinkORB\JwtAuth\Security\EntryPoint\JwtAuthenticationEntryPoint;
  * jwt_issuer_url_origin_param: The name of an HTTP query string parameter with
  *                              which to supply the issuer with the origin path
  *                              (i.e. the path originally requested by the user)
+ *                              Not meaningful for Fast JWT Authentication
  * default_return_to: path to which to redirect after successful authentication
  *                    (used only when the JWT does not contain this information,
- *                    default: "/")
+ *                    default: "/") Not meaningful for Fast JWT Authentication
  * username_jwt_key: the name of a key in the JWT which holds the username
  *                   being claimed (default: "username")
  * jwt_request_key: the name of an HTTP query string parameter which holds the
