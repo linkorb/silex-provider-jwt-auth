@@ -11,6 +11,7 @@ use Silex\Api\ControllerProviderInterface;
 use Silex\Application;
 use Symfony\Component\Security\Core\Authentication\Provider\SimpleAuthenticationProvider;
 use Symfony\Component\Security\Http\Firewall\SimplePreAuthenticationListener;
+use Symfony\Component\Security\Http\HttpUtils;
 
 use LinkORB\JwtAuth\JwtCodec\JwtDecoder;
 use LinkORB\JwtAuth\Security\Authentication\FastJwtAuthenticator;
@@ -57,7 +58,8 @@ use LinkORB\JwtAuth\Security\Firewall\RenewablePreAuthenticationListener;
  *
  * Firewall options required for "Fast" JWT auth:-
  *
- * jwt_info_url: Url to which the requestor is directed when a JWT is missing.
+ * jwt_info_url: Url or path to which the requestor is directed when a JWT is
+ *               missing or invalid.
  *
  *
  * Firewall options:-
@@ -124,6 +126,7 @@ class JwtAuthenticatorServiceProvider implements
             $app["jwt_auth.security.entry_point.{$name}.jwt_issuer"] = function () use ($app, $options, $requireIssuer) {
                 if (!$requireIssuer) {
                     return new FastAuthenticationEntryPoint(
+                        new HttpUtils,
                         $options['jwt_info_url']
                     );
                 }
