@@ -33,17 +33,26 @@ class JwtAuthenticator extends FastJwtAuthenticator implements
     }
 
     /**
-     * Redirect to the session target_path, as was set at start of authentication.
+     * Resolve targetUrl and redirect
+     * 
+     * Resolves targetUrl in following order:
+     * 1. a `target` passed as HTTP Query parameter
+     * 2. the session target_path, as was set at start of authentication.
+     * 3. the default redirect option
      *
      * {@inheritDoc}
      */
     public function onAuthenticationSuccess(Request $request, TokenInterface $token)
     {
-        $targetUrl = $request->getSession()->get("_security.{$token->getProviderKey()}.target_path");
+        $targetUrl = null;
+        if ($request->query->has('target')) {
+            $targetUrl = $request->getSchemeAndHttpHost() . $request->query->get('target');
+        }
         if (!$targetUrl) {
-            return new RedirectResponse(
-                $request->getSchemeAndHttpHost() . $this->optDefaultRedirect()
-            );
+            $targetUrl = $request->getSession()->get("_security.{$token->getProviderKey()}.target_path");
+        }
+        if (!$targetUrl) {
+            $targetUrl = $request->getSchemeAndHttpHost() . $this->optDefaultRedirect();
         }
 
         return new RedirectResponse($targetUrl);
